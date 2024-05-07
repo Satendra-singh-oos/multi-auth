@@ -2,6 +2,17 @@ import mongoose, { Schema } from "mongoose";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+export interface IUser extends Document {
+  username: string;
+  email: string;
+  password: string;
+  isVerified: boolean;
+  verifyOtp?: string;
+  verifyOtpExpiry?: Date;
+  isPasswordCorrect(password: string): Promise<boolean>;
+  generateAccessToken(): string;
+}
+
 const userSchema = new Schema({
   username: {
     type: String,
@@ -19,12 +30,25 @@ const userSchema = new Schema({
     type: String,
     required: true,
   },
+
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+
+  verifyOtp: {
+    type: String,
+  },
+  verifyOtpExpiry: {
+    type: Date,
+  },
 });
 
-userSchema.pre("save", async function () {
+userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   this.password = await bcryptjs.hash(this.password, 10);
+  next();
 });
 
 userSchema.methods.isPasswordCorrect = async function (password: string) {
@@ -43,4 +67,4 @@ userSchema.methods.genrateAccessToken = function () {
   );
 };
 
-export const User = mongoose.model("User", userSchema);
+export const User = mongoose.model<IUser>("User", userSchema);
